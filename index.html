@@ -87,3 +87,49 @@ function guestStart(){
  card.innerHTML='<p class="ey">心记 · 立即开始</p><h2>不用注册，也能开始背。</h2><p style="color:#818980;font-size:13px">先用访客账号记录你的学习。数据会保存在这台设备上。</p><button class="btn" style="width:100%;margin-top:8px" onclick="guestStart()">直接开始使用</button><p style="font-size:12px;color:#818980;margin-top:15px">之后想同步到其他设备，再绑定邮箱即可。</p>';
 })();
 </script>
+<style>
+.empty{padding:38px 20px;text-align:center;color:#818980;border:1px dashed #d9dfd6;border-radius:16px;background:#fbfcfa}.empty b{display:block;color:#476f52;font-size:17px;margin-bottom:7px}.subjectRow{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:14px 0;border-bottom:1px solid #edf0eb}.subjectRow:last-child{border:0}.tiny{font-size:12px;color:#818980}.reportHero{display:flex;gap:16px;align-items:stretch;margin:20px 0}.metric{flex:1;background:#fff;border:1px solid #e8e9e3;border-radius:16px;padding:18px}.metric b{font-size:28px;color:#476f52;display:block;margin-top:7px}.chartShell{height:220px;padding:20px 6px 0;background:repeating-linear-gradient(to bottom,#fff 0 53px,#eef1ec 54px);border-radius:12px}.chartEmpty{height:100%;display:grid;place-items:center;color:#929a91;font-size:13px}.planHero{background:linear-gradient(115deg,#edf5ea,#dcebd8);border-radius:22px;padding:25px;margin:20px 0}.planGrid{display:grid;grid-template-columns:repeat(7,minmax(105px,1fr));gap:8px;overflow:auto;padding-bottom:4px}.dayCol{min-height:190px;border:1px solid #e8e9e3;border-radius:14px;padding:10px;background:#fff}.dayCol.today{border:2px solid #9fc3a1;background:#f7fbf6}.dayNum{font-size:12px;color:#818980}.planItem{font-size:11px;line-height:1.35;background:#e6f1e4;color:#476f52;padding:7px;border-radius:7px;margin:7px 0}.addPlan{border:1px dashed #b8cdb8;color:#5a7d5c;background:#fbfdfb;border-radius:8px;width:100%;padding:6px;font-size:11px;cursor:pointer}.monthGrid{display:grid;grid-template-columns:repeat(7,minmax(92px,1fr));gap:6px;overflow:auto}.monthCell{height:105px;border:1px solid #e8e9e3;border-radius:10px;padding:7px;background:#fff;font-size:11px}.monthCell.muted{opacity:.35}.monthCell.today{border:2px solid #9fc3a1}.monthHead{display:grid;grid-template-columns:repeat(7,minmax(92px,1fr));gap:6px;overflow:auto;margin-bottom:6px}.monthHead span{text-align:center;font-size:11px;color:#818980}.tabline{display:flex;gap:8px;margin:18px 0}.tabline button{border:1px solid #e8e9e3;border-radius:9px;background:#fff;padding:9px 14px;cursor:pointer}.tabline button.on{background:#e6f1e4;color:#476f52;font-weight:bold}
+</style>
+<script>
+function dateKey(d){return d.toISOString().slice(0,10)}
+function localDay(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function stats(){
+ const cards=data.cards||[], avg=cards.length?Math.round(cards.reduce((s,c)=>s+(c.score||0),0)/cards.length):0;
+ const groups={};cards.forEach(c=>{const n=c.subject||'未分类';(groups[n]||(groups[n]=[])).push(c)});
+ return {cards,avg,groups,due:cards.filter(c=>!c.due||c.due<=today()).length}
+}
+function renderHome(){
+ const x=stats(),home=document.getElementById('home');if(!home)return;
+ const rows=Object.entries(x.groups).map(([name,list])=>{const p=Math.round(list.reduce((a,c)=>a+(c.score||0),0)/list.length);return '<div class="subjectRow"><div><b>'+esc(name)+'</b><div class="tiny">'+list.length+' 张卡片</div></div><div style="min-width:130px"><div class="bar"><i style="width:'+p+'%"></i></div><div class="tiny" style="text-align:right;margin-top:5px">掌握度 '+p+'%</div></div></div>'}).join('');
+ home.innerHTML='<div class="top"><div><p class="ey">今天 · '+new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric'})+'</p><h1>'+ (x.cards.length?'慢慢来，今天也会记住一点。':'从第一条开始，慢慢建立你的心记。')+'</h1></div></div><div class="hero"><div><p class="ey">今日的轻松节奏</p><h2>'+ (x.cards.length?'把记住的，慢慢变成掌握的。':'现在还是 0，但每一条都会算数。')+'</h2><p>今天有 '+x.due+' 张待复习，预计 '+(x.due?Math.max(1,Math.ceil(x.due/2)):0)+' 分钟。</p><button class="btn" onclick="go(\''+(x.cards.length?'review':'library')+'\')">'+(x.cards.length?'开始今日复习 →':'录入第一张卡 →')+'</button></div><div class="ring">'+x.avg+'%</div></div><div class="grid"><div class="box"><span>已录入内容</span><b>'+x.cards.length+' 张</b>从一张开始也很好</div><div class="box"><span>总体掌握度</span><b>'+x.avg+'%</b>会随复习慢慢变化</div><div class="box"><span>今日待复习</span><b>'+x.due+' 张</b>系统会帮你安排节奏</div></div><h3>按科目掌握</h3><div class="box">'+(rows||'<div class="empty"><b>还没有学习数据</b>去内容库录入第一个科目和知识点吧。</div>')+'</div>';
+}
+function renderReport(){
+ const x=stats(),hist=data.history||[],report=document.getElementById('report');if(!report)return;
+ const byDay={};hist.forEach(h=>{(byDay[h.date]||(byDay[h.date]=[])).push(h.score)});
+ const dates=[];for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);dates.push(localDay(d))}
+ const vals=dates.map(d=>{const a=byDay[d];return a?Math.round(a.reduce((s,n)=>s+n,0)/a.length):null});
+ let graph='<div class="chartEmpty">完成一次复习后，这里会画出你的真实掌握度变化。</div>';
+ if(vals.some(v=>v!==null)){const points=vals.map((v,i)=>{const y=v===null?180:190-v*1.55;return (i*100/13).toFixed(1)+','+y.toFixed(1)}).join(' ');graph='<svg viewBox="0 0 100 200" preserveAspectRatio="none" style="width:100%;height:100%"><polyline points="'+points+'" fill="none" stroke="#6e9c74" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg>'}
+ const subjectRows=Object.entries(x.groups).map(([n,a])=>{const p=Math.round(a.reduce((s,c)=>s+(c.score||0),0)/a.length);return '<p>'+esc(n)+' '+p+'%</p><div class="bar"><i style="width:'+p+'%"></i></div>'}).join('');
+ report.innerHTML='<p class="ey">学习报告 · 从真实数据开始</p><h1>'+ (x.cards.length?'你的背诵，正在慢慢开花。':'趋势会从你的第一张卡、第一次复习开始。')+'</h1><div class="reportHero"><div class="metric"><span class="tiny">当前掌握度</span><b>'+x.avg+'%</b></div><div class="metric"><span class="tiny">累计复习</span><b>'+hist.length+' 次</b></div><div class="metric"><span class="tiny">已录入卡片</span><b>'+x.cards.length+' 张</b></div></div><div class="charts"><div class="box"><p class="ey">掌握度趋势 · 最近 14 天</p><div class="chartShell">'+graph+'</div></div><div class="box"><p class="ey">科目对比</p>'+(subjectRows||'<div class="empty"><b>暂无科目数据</b>录入内容并完成复习后，这里会自动对比。</div>')+'</div></div>';
+}
+function rateCard(level){
+ if(!activeCard)return;const c=data.cards.find(x=>x.id===activeCard.id);c.reviews++;
+ const step=level===2?7:level===1?2:1;c.score=Math.max(0,Math.min(100,Math.round((c.score||0)*.65+[85,58,25][level]*.35)));
+ const next=new Date();next.setDate(next.getDate()+step);c.due=localDay(next);
+ data.history=data.history||[];data.history.push({date:today(),score:c.score});persist();renderReview();renderHome();
+}
+function planItems(day){return (data.plans||[]).filter(p=>p.date===day)}
+function addPlan(day){const text=prompt('给 '+day+' 添加一个小计划：');if(!text||!text.trim())return;data.plans=data.plans||[];data.plans.push({id:Date.now(),date:day,text:text.trim()});persist();renderPlan()}
+function renderPlan(tab){
+ const p=document.getElementById('plan');if(!p)return;const now=new Date(),view=tab||p.dataset.view||'week';p.dataset.view=view;
+ const start=new Date(now);start.setDate(now.getDate()-(now.getDay()+6)%7);
+ let body='';
+ if(view==='day'){const k=localDay(now),items=planItems(k);body='<div class="box"><h3>今天，稳稳完成就很好</h3>'+(items.length?items.map(i=>'<p class="planItem">□ '+esc(i.text)+'</p>').join(''):'<div class="empty"><b>今天还没有安排</b>留一点空白，也是一种计划。</div>')+'<p><button class="btn" onclick="addPlan(\''+k+'\')">＋ 添加今天的计划</button></p></div>'}
+ if(view==='week'){let cols='';for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);const k=localDay(d),items=planItems(k);cols+='<div class="dayCol '+(k===today()?'today':'')+'"><b>'+['一','二','三','四','五','六','日'][i]+'</b><div class="dayNum">'+(d.getMonth()+1)+' 月 '+d.getDate()+' 日</div>'+items.map(x=>'<div class="planItem">'+esc(x.text)+'</div>').join('')+'<button class="addPlan" onclick="addPlan(\''+k+'\')">＋ 添加</button></div>'}body='<div class="planGrid">'+cols+'</div>'}
+ if(view==='month'){const first=new Date(now.getFullYear(),now.getMonth(),1),last=new Date(now.getFullYear(),now.getMonth()+1,0),offset=(first.getDay()+6)%7;let cells='';for(let i=0;i<42;i++){const d=new Date(first);d.setDate(1+i-offset);const k=localDay(d),inMonth=d.getMonth()===now.getMonth(),items=planItems(k);cells+='<div class="monthCell '+(!inMonth?'muted ':'')+(k===today()?'today':'')+'"><b>'+d.getDate()+'</b>'+items.slice(0,2).map(x=>'<div class="planItem">'+esc(x.text)+'</div>').join('')+(inMonth?'<button class="addPlan" onclick="addPlan(\''+k+'\')">＋</button>':'')+'</div>'}body='<div class="monthHead">'+['一','二','三','四','五','六','日'].map(x=>'<span>'+x+'</span>').join('')+'</div><div class="monthGrid">'+cells+'</div>'}
+ p.innerHTML='<p class="ey">学习计划 · 给努力留一点余裕</p><h1>有方向地努力，也有余裕地生活。</h1><div class="planHero"><b>本周计划完成 '+(data.plans||[]).filter(x=>x.date>=localDay(start)&&x.date<=localDay(new Date(start.getTime()+6*864e5))).length+' 项</b><p class="tiny">计划可以很小：一组词、一个章节、一段复盘。</p></div><div class="tabline"><button class="'+(view==='day'?'on':'')+'" onclick="renderPlan(\'day\')">日计划</button><button class="'+(view==='week'?'on':'')+'" onclick="renderPlan(\'week\')">周计划</button><button class="'+(view==='month'?'on':'')+'" onclick="renderPlan(\'month\')">月计划</button></div>'+body;
+}
+const baseGo=go;go=function(id,b){baseGo(id,b);if(id==='plan')renderPlan();if(id==='report')renderReport();if(id==='home')renderHome()};
+renderHome();renderReport();renderPlan('week');
+</script>
