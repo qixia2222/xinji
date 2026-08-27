@@ -133,3 +133,39 @@ function renderPlan(tab){
 const baseGo=go;go=function(id,b){baseGo(id,b);if(id==='plan')renderPlan();if(id==='report')renderReport();if(id==='home')renderHome()};
 renderHome();renderReport();renderPlan('week');
 </script>
+<style>
+.planComposer{display:grid;grid-template-columns:150px 1fr auto;gap:9px;align-items:center;padding:14px;background:#fff;border:1px solid #e8e9e3;border-radius:15px;margin:14px 0}.planComposer input{padding:10px;border:1px solid #dfe5dc;border-radius:9px;min-width:0}.colorPick{display:flex;gap:5px}.colorDot{width:23px;height:23px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #d8ded5;cursor:pointer}.planItem.done{text-decoration:line-through;opacity:.62}.planItemRow{display:flex;gap:5px;align-items:flex-start;margin:7px 0}.planItemRow .planItem{flex:1;margin:0}.checkPlan{border:0;background:#fff;color:#6b946d;border:1px solid #c5d8c3;border-radius:6px;min-width:25px;height:25px;cursor:pointer}.itemTools{display:flex;gap:3px}.miniDot{width:13px;height:13px;border:0;border-radius:50%;cursor:pointer;margin-top:6px}.diaryList{display:grid;gap:12px;margin-top:18px}.diaryEntry{background:#fff;border:1px solid #e8e9e3;border-radius:15px;padding:16px}.diaryEntry p{white-space:pre-wrap;line-height:1.7;margin-bottom:0}
+@media(max-width:760px){.planComposer{grid-template-columns:1fr}.planComposer .btn{width:100%}}
+</style>
+<script>
+const planColors=['#e2f0df','#f9e6d5','#e6e3f5','#dcecf1'];
+function planItems(day){return (data.plans||[]).filter(p=>p.date===day)}
+function planForm(){
+ return '<div class="planComposer"><input id="planDate" type="date" value="'+today()+'"><input id="planText" placeholder="写下一件要完成的小事"><div class="colorPick"><button class="colorDot" style="background:#e2f0df" onclick="choosePlanColor(\'#e2f0df\')" aria-label="绿色"></button><button class="colorDot" style="background:#f9e6d5" onclick="choosePlanColor(\'#f9e6d5\')" aria-label="橙色"></button><button class="colorDot" style="background:#e6e3f5" onclick="choosePlanColor(\'#e6e3f5\')" aria-label="紫色"></button><input id="planColor" type="hidden" value="#e2f0df"></div><button class="btn" onclick="savePlan()">添加计划</button></div>';
+}
+function choosePlanColor(color){const e=document.getElementById('planColor');if(e)e.value=color}
+function savePlan(){
+ const date=document.getElementById('planDate').value,text=document.getElementById('planText').value.trim(),color=document.getElementById('planColor').value;
+ if(!date||!text){document.getElementById('planText').focus();return}
+ data.plans=data.plans||[];data.plans.push({id:Date.now(),date,text,color,done:false});persist();renderPlan();
+}
+function togglePlan(id){const p=(data.plans||[]).find(x=>x.id===id);if(!p)return;p.done=!p.done;persist();renderPlan()}
+function recolorPlan(id){const p=(data.plans||[]).find(x=>x.id===id);if(!p)return;const n=planColors.indexOf(p.color||planColors[0]);p.color=planColors[(n+1)%planColors.length];persist();renderPlan()}
+function planHtml(item){const bg=item.color||planColors[0];return '<div class="planItemRow"><button class="checkPlan" onclick="togglePlan('+item.id+')" title="标记完成">'+(item.done?'✓':'○')+'</button><div class="planItem '+(item.done?'done':'')+'" style="background:'+bg+'">'+esc(item.text)+'</div><div class="itemTools"><button class="miniDot" style="background:'+bg+'" onclick="recolorPlan('+item.id+')" title="换颜色"></button></div></div>'}
+function renderPlan(tab){
+ const p=document.getElementById('plan');if(!p)return;const now=new Date(),view=tab||p.dataset.view||'week';p.dataset.view=view;
+ const all=data.plans||[],done=all.filter(x=>x.done).length;
+ let body='';
+ if(view==='day'){const k=today(),items=planItems(k);body='<div class="box"><h3>今天，稳稳完成就很好</h3>'+(items.length?items.map(planHtml).join(''):'<div class="empty"><b>今天还没有安排</b>从最小的一件事开始吧。</div>')+'</div>'}
+ if(view==='week'){const start=new Date(now);start.setDate(now.getDate()-(now.getDay()+6)%7);let cols='';for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);const k=localDay(d),items=planItems(k);cols+='<div class="dayCol '+(k===today()?'today':'')+'"><b>'+['一','二','三','四','五','六','日'][i]+'</b><div class="dayNum">'+(d.getMonth()+1)+' 月 '+d.getDate()+' 日</div>'+items.map(planHtml).join('')+'</div>'}body='<div class="planGrid">'+cols+'</div>'}
+ if(view==='month'){const first=new Date(now.getFullYear(),now.getMonth(),1),offset=(first.getDay()+6)%7;let cells='';for(let i=0;i<42;i++){const d=new Date(first);d.setDate(1+i-offset);const k=localDay(d),inMonth=d.getMonth()===now.getMonth(),items=planItems(k);cells+='<div class="monthCell '+(!inMonth?'muted ':'')+(k===today()?'today':'')+'"><b>'+d.getDate()+'</b>'+items.slice(0,3).map(x=>'<div class="planItem '+(x.done?'done':'')+'" style="background:'+(x.color||planColors[0])+'">'+esc(x.text)+'</div>').join('')+'</div>'}body='<div class="monthHead">'+['一','二','三','四','五','六','日'].map(x=>'<span>'+x+'</span>').join('')+'</div><div class="monthGrid">'+cells+'</div>'}
+ p.innerHTML='<p class="ey">学习计划 · 给努力留一点余裕</p><h1>有方向地努力，也有余裕地生活。</h1><div class="planHero"><b>已完成 '+done+' 项计划</b><p class="tiny">添加后可以点 ○ 标记完成，点彩色小圆点换颜色。</p></div>'+planForm()+'<div class="tabline"><button class="'+(view==='day'?'on':'')+'" onclick="renderPlan(\'day\')">日计划</button><button class="'+(view==='week'?'on':'')+'" onclick="renderPlan(\'week\')">周计划</button><button class="'+(view==='month'?'on':'')+'" onclick="renderPlan(\'month\')">月计划</button></div>'+body;
+}
+function renderDiary(){
+ const d=document.getElementById('diary');if(!d)return;const entries=data.diary||[];
+ d.innerHTML='<p class="ey">复习日记 · 把今天也好好收藏</p><h1>记录一点点，也是在看见自己。</h1><div class="quote">✦ 今天没有白费力气，你是在给未来的自己偷偷充电。</div><div class="box note"><p class="ey">写下今天的感想</p><textarea id="diaryText" placeholder="今天记住了什么？有什么小小的心情或收获？"></textarea><p><button class="btn" onclick="saveDiaryEntry()">收藏这一页日记</button></p></div><div class="diaryList">'+(entries.length?entries.map(e=>'<div class="diaryEntry"><span class="ey">'+esc(e.date)+'</span><p>'+esc(e.text)+'</p></div>').join(''):'<div class="empty"><b>第一篇日记还在等你</b>完成复习后，写下一句话也很好。</div>')+'</div>';
+}
+function saveDiaryEntry(){const t=document.getElementById('diaryText').value.trim();if(!t)return;data.diary=data.diary||[];data.diary.unshift({id:Date.now(),date:today(),text:t});persist();renderDiary()}
+const currentGo=go;go=function(id,b){currentGo(id,b);if(id==='plan')renderPlan();if(id==='diary')renderDiary()};
+renderPlan('week');renderDiary();
+</script>
