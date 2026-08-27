@@ -49,3 +49,30 @@ for(let i=0;i<35;i++){let n=i-3;if(n<1)n+=31;document.getElementById('mg').inner
 document.getElementById('rate').innerHTML='<p>这张卡，你掌握得怎么样？</p><button onclick="rateCard(2)">我会了</button><button onclick="rateCard(1)">有点模糊</button><button onclick="rateCard(0)">还不会</button>';
 document.querySelector('#diary .btn').onclick=saveDiary;renderHome();
 </script>
+<script>
+const SUPABASE_URL='https://rieqvjnvebseammypsug.supabase.co';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpZXF2am52ZWJzZWFtbXlwc3VnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4MTE1ODEsImV4cCI6MjEwMzM4NzU4MX0.GTW7iltQmzuTB0DGOTikIa0yUmCLIrEv7P1lsSuYMTs';
+let authMode=false;
+function authToggle(){
+ authMode=!authMode;
+ document.querySelector('#authGate h2').textContent=authMode?'创建你的心记账号':'登录后，数据会跟着你走。';
+ document.querySelector('#authGate .btn').textContent=authMode?'注册并开始':'登录';
+ document.querySelector('.authAlt').textContent=authMode?'已有账号？登录':'还没有账号？注册';
+ document.getElementById('authMsg').textContent='';
+}
+async function authSubmit(){
+ const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value,msg=document.getElementById('authMsg');
+ if(!email||password.length<6){msg.textContent='请填写邮箱与至少 6 位密码。';return}
+ msg.textContent='正在连接…';
+ try{
+  const endpoint=authMode?'/auth/v1/signup':'/auth/v1/token?grant_type=password';
+  const res=await fetch(SUPABASE_URL+endpoint,{method:'POST',headers:{apikey:SUPABASE_ANON,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+  const result=await res.json();
+  if(!res.ok){msg.textContent=result.msg||result.message||'连接失败，请稍后再试。';return}
+  if(authMode&&!result.access_token){msg.textContent='注册成功，请去邮箱确认后再登录。';return}
+  localStorage.setItem('xinji-cloud-session',JSON.stringify(result));
+  document.getElementById('authGate').classList.add('hidden');
+ }catch(e){msg.textContent='网络连接失败，请检查网络后再试。'}
+}
+if(localStorage.getItem('xinji-cloud-session'))document.getElementById('authGate').classList.add('hidden');
+</script>
