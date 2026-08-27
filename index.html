@@ -76,3 +76,14 @@ async function authSubmit(){
 }
 if(localStorage.getItem('xinji-cloud-session'))document.getElementById('authGate').classList.add('hidden');
 </script>
+<script>
+function guestStart(){
+ if(!localStorage.getItem('xinji-guest-id'))localStorage.setItem('xinji-guest-id','guest-'+Date.now()+'-'+Math.random().toString(36).slice(2,8));
+ document.getElementById('authGate').classList.add('hidden');
+}
+(function(){
+ const gate=document.getElementById('authGate'); if(!gate)return;
+ const card=gate.querySelector('.authCard');
+ card.innerHTML='<p class="ey">心记 · 立即开始</p><h2>不用注册，也能开始背。</h2><p style="color:#818980;font-size:13px">先用访客账号记录你的学习。数据会保存在这台设备上。</p><button class="btn" style="width:100%;margin-top:8px" onclick="guestStart()">直接开始使用</button><p style="font-size:12px;color:#818980;margin-top:15px">之后想同步到其他设备，再绑定邮箱即可。</p>';
+})();
+</script>
