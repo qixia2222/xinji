@@ -49,33 +49,7 @@ for(let i=0;i<35;i++){let n=i-3;if(n<1)n+=31;document.getElementById('mg').inner
 document.getElementById('rate').innerHTML='<p>这张卡，你掌握得怎么样？</p><button onclick="rateCard(2)">我会了</button><button onclick="rateCard(1)">有点模糊</button><button onclick="rateCard(0)">还不会</button>';
 document.querySelector('#diary .btn').onclick=saveDiary;renderHome();
 </script>
-<script>
-const SUPABASE_URL='https://rieqvjnvebseammypsug.supabase.co';
-const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpZXF2am52ZWJzZWFtbXlwc3VnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4MTE1ODEsImV4cCI6MjEwMzM4NzU4MX0.GTW7iltQmzuTB0DGOTikIa0yUmCLIrEv7P1lsSuYMTs';
-let authMode=false;
-function authToggle(){
- authMode=!authMode;
- document.querySelector('#authGate h2').textContent=authMode?'创建你的心记账号':'登录后，数据会跟着你走。';
- document.querySelector('#authGate .btn').textContent=authMode?'注册并开始':'登录';
- document.querySelector('.authAlt').textContent=authMode?'已有账号？登录':'还没有账号？注册';
- document.getElementById('authMsg').textContent='';
-}
-async function authSubmit(){
- const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value,msg=document.getElementById('authMsg');
- if(!email||password.length<6){msg.textContent='请填写邮箱与至少 6 位密码。';return}
- msg.textContent='正在连接…';
- try{
-  const endpoint=authMode?'/auth/v1/signup':'/auth/v1/token?grant_type=password';
-  const res=await fetch(SUPABASE_URL+endpoint,{method:'POST',headers:{apikey:SUPABASE_ANON,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
-  const result=await res.json();
-  if(!res.ok){msg.textContent=result.msg||result.message||'连接失败，请稍后再试。';return}
-  if(authMode&&!result.access_token){msg.textContent='注册成功，请去邮箱确认后再登录。';return}
-  localStorage.setItem('xinji-cloud-session',JSON.stringify(result));
-  document.getElementById('authGate').classList.add('hidden');
- }catch(e){msg.textContent='网络连接失败，请检查网络后再试。'}
-}
-if(localStorage.getItem('xinji-cloud-session'))document.getElementById('authGate').classList.add('hidden');
-</script>
+
 <script>
 function guestStart(){
  if(!localStorage.getItem('xinji-guest-id'))localStorage.setItem('xinji-guest-id','guest-'+Date.now()+'-'+Math.random().toString(36).slice(2,8));
@@ -168,4 +142,21 @@ function renderDiary(){
 function saveDiaryEntry(){const t=document.getElementById('diaryText').value.trim();if(!t)return;data.diary=data.diary||[];data.diary.unshift({id:Date.now(),date:today(),text:t});persist();renderDiary()}
 const currentGo=go;go=function(id,b){currentGo(id,b);if(id==='plan')renderPlan();if(id==='diary')renderDiary()};
 renderPlan('week');renderDiary();
+</script>
+<style>
+.formGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.formGrid input,.formGrid textarea{width:100%;padding:11px;border:1px solid #e1e6df;border-radius:10px;font:inherit}.formGrid .wide{grid-column:1/-1}.photoZone{border:1px dashed #a8c3a9;background:#fbfdfb;border-radius:13px;padding:14px;text-align:center}.photoZone input{display:none}.photoZone label{color:#476f52;font-weight:bold;cursor:pointer}.photoPreview{max-width:100%;max-height:220px;border-radius:11px;margin-top:10px}.catPill{display:inline-block;background:#eef5ec;color:#56765a;padding:4px 8px;border-radius:999px;font-size:11px;margin:3px}.libraryCard{padding:15px 0;border-bottom:1px solid #e8e9e3}.libraryCard img{width:55px;height:55px;object-fit:cover;border-radius:9px;float:right;margin-left:8px}.planPanel{background:#fff;border:1px solid #e8e9e3;border-radius:18px;padding:18px}.goalRow{display:flex;align-items:center;gap:8px;border-bottom:1px solid #edf0eb;padding:11px 0}.goalText{flex:1;padding:8px 10px;border-radius:8px;font-size:14px}.goalText.done{text-decoration:line-through;opacity:.58}.planMode{display:flex;gap:8px;margin:20px 0}.planMode button{padding:9px 13px;border-radius:9px;border:1px solid #e0e6de;background:#fff;cursor:pointer}.planMode button.on{background:#e3f0e2;color:#476f52;font-weight:bold}@media(max-width:760px){.formGrid{grid-template-columns:1fr}}
+</style>
+<script>
+var pendingCardImage='';
+function renderLibrary(){const lib=document.getElementById('library');if(!lib)return;const cards=data.cards||[],cats=[...new Set(cards.map(c=>c.category).filter(Boolean))];lib.innerHTML='<p class="ey">内容库 · 自动保存在此设备</p><h1>把要背的，收进心记。</h1><div class="box" style="max-width:780px"><h3>新增一张背诵卡</h3><div class="formGrid"><input id="inSubject" placeholder="科目，例如：英语"><input id="inCategory" placeholder="分类，例如：词汇 / 重点概念"><input id="inChapter" placeholder="章节（可选）"><input id="inTags" placeholder="标签（用空格分开）"><textarea class="wide" id="inQuestion" placeholder="正面：你想问自己的内容"></textarea><textarea class="wide" id="inAnswer" placeholder="背面：答案、释义或知识点"></textarea><div class="wide photoZone"><label for="inPhoto">📷 拍照或从相册导入</label><input id="inPhoto" type="file" accept="image/*" capture="environment" onchange="readCardPhoto(this)"><div id="ocrMsg" class="tiny" style="margin-top:7px">支持拍照识别；识别后可以自己修改文字。</div><div id="photoPreviewBox"></div></div></div><p><button class="btn" onclick="addCard()">保存到内容库</button> <span id="saveMsg" style="color:#476f52;font-size:13px"></span></p></div><div class="box" style="max-width:780px;margin-top:16px"><p class="ey">我的分类</p>'+(cats.length?cats.map(x=>'<span class="catPill">'+esc(x)+'</span>').join(''):'<span class="tiny">还没有分类，保存第一张卡时就会建立。</span>')+'</div><div class="box" style="max-width:780px;margin-top:16px"><p class="ey">已保存的内容 · '+cards.length+' 张</p>'+(cards.length?cards.map(c=>'<div class="libraryCard">'+(c.sourceImage?'<img src="'+c.sourceImage+'" alt="卡片图片">':'')+'<b>'+esc(c.subject||'未分类')+(c.category?' · '+esc(c.category):'')+(c.chapter?' · '+esc(c.chapter):'')+'</b><p>'+esc(c.question)+'</p><span class="tiny">'+esc(c.tags||'')+' · 掌握度 '+Math.round(c.score||0)+'%</span></div>').join(''):'<div class="empty"><b>还没有卡片</b>文字、知识点或一张照片，都可以从这里开始。</div>')+'</div>'}
+function compressCardImage(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const max=1280,scale=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*scale);c.height=Math.round(im.height*scale);c.getContext('2d').drawImage(im,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.68))};im.onerror=reject;im.src=r.result};r.onerror=reject;r.readAsDataURL(file)})}
+async function readCardPhoto(input){const file=input.files&&input.files[0];if(!file)return;const msg=document.getElementById('ocrMsg');msg.textContent='正在准备图片…';try{pendingCardImage=await compressCardImage(file);document.getElementById('photoPreviewBox').innerHTML='<img class="photoPreview" src="'+pendingCardImage+'" alt="导入的照片">';if(!('TextDetector'in window)){msg.textContent='已保存图片。此浏览器暂不支持自动识别，可手动补充文字。';return}msg.textContent='正在识别图片里的文字…';const im=new Image();im.src=pendingCardImage;await im.decode();const blocks=await new TextDetector().detect(im),text=blocks.map(x=>x.rawValue).join('\\n').trim();if(text){if(!document.getElementById('inQuestion').value)document.getElementById('inQuestion').value=text;msg.textContent='已识别文字，检查并修改后即可保存。'}else msg.textContent='没有识别到清晰文字，图片仍会一起保存。'}catch(e){msg.textContent='图片已保留；可手动补充文字。'}}
+function addCard(){const subject=document.getElementById('inSubject').value.trim()||'未分类',category=document.getElementById('inCategory').value.trim(),chapter=document.getElementById('inChapter').value.trim(),tags=document.getElementById('inTags').value.trim(),question=document.getElementById('inQuestion').value.trim(),answer=document.getElementById('inAnswer').value.trim();if(!question){document.getElementById('saveMsg').textContent='请写下内容，或先拍照识别。';return}data.cards=data.cards||[];data.cards.unshift({id:Date.now(),subject,category,chapter,tags,question,answer:answer||'请在复习时补充答案',sourceImage:pendingCardImage,score:0,reviews:0,due:today(),created:today()});try{persist();pendingCardImage='';renderLibrary();renderHome()}catch(e){data.cards.shift();document.getElementById('saveMsg').textContent='图片太大，暂时无法保存；请换一张更小的图片。'}}
+function scopeKey(mode){if(mode==='day')return today();const d=new Date();if(mode==='week'){d.setDate(d.getDate()-(d.getDay()+6)%7);return localDay(d)}return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function scopedPlans(mode){return(data.plans||[]).filter(p=>(p.mode||'day')===mode&&p.key===scopeKey(mode))}
+function saveSeparatePlan(){const mode=document.getElementById('goalMode').value,text=document.getElementById('goalText').value.trim(),color=document.getElementById('goalColor').value;if(!text){document.getElementById('goalText').focus();return}data.plans=data.plans||[];data.plans.unshift({id:Date.now(),mode,key:scopeKey(mode),text,color,done:false});persist();renderPlan(mode)}
+function toggleGoal(id){const p=(data.plans||[]).find(x=>x.id===id);if(p){p.done=!p.done;persist();renderPlan(document.getElementById('plan').dataset.view||'day')}}
+function recolorGoal(id){const p=(data.plans||[]).find(x=>x.id===id);if(p){const ar=['#e2f0df','#f9e6d5','#e6e3f5','#dcecf1'];p.color=ar[(ar.indexOf(p.color)+1)%ar.length];persist();renderPlan(document.getElementById('plan').dataset.view||'day')}}
+function renderPlan(mode){const p=document.getElementById('plan');if(!p)return;mode=mode||p.dataset.view||'day';p.dataset.view=mode;const label=mode==='day'?'今天的日计划':mode==='week'?'本周计划':'本月计划',hint=mode==='day'?'只安排今天真正想完成的事。':mode==='week'?'写这一周的方向和关键目标，不按每天拆分。':'写本月想推进的大方向，不和日、周计划混在一起。',items=scopedPlans(mode);p.innerHTML='<p class="ey">学习计划 · 三种节奏，彼此独立</p><h1>有方向地努力，也有余裕地生活。</h1><div class="planMode"><button class="'+(mode==='day'?'on':'')+'" onclick="renderPlan(\'day\')">日计划</button><button class="'+(mode==='week'?'on':'')+'" onclick="renderPlan(\'week\')">周计划</button><button class="'+(mode==='month'?'on':'')+'" onclick="renderPlan(\'month\')">月计划</button></div><div class="planHero"><b>'+label+'</b><p class="tiny">'+hint+'</p></div><div class="planComposer"><input id="goalText" placeholder="添加一条'+label+'"><div class="colorPick"><button class="colorDot" style="background:#e2f0df" onclick="document.getElementById(\'goalColor\').value=\'#e2f0df\'"></button><button class="colorDot" style="background:#f9e6d5" onclick="document.getElementById(\'goalColor\').value=\'#f9e6d5\'"></button><button class="colorDot" style="background:#e6e3f5" onclick="document.getElementById(\'goalColor\').value=\'#e6e3f5\'"></button><input id="goalColor" type="hidden" value="#e2f0df"><input id="goalMode" type="hidden" value="'+mode+'"></div><button class="btn" onclick="saveSeparatePlan()">添加</button></div><div class="planPanel">'+(items.length?items.map(i=>'<div class="goalRow"><button class="checkPlan" onclick="toggleGoal('+i.id+')">'+(i.done?'✓':'○')+'</button><div class="goalText '+(i.done?'done':'')+'" style="background:'+(i.color||'#e2f0df')+'">'+esc(i.text)+'</div><button class="miniDot" style="background:'+(i.color||'#e2f0df')+'" onclick="recolorGoal('+i.id+')" title="换颜色"></button></div>').join(''):'<div class="empty"><b>'+label+'还是空的</b>'+hint+'</div>')+'</div>'}
+var latestGo=go;go=function(id,b){latestGo(id,b);if(id==='library')renderLibrary();if(id==='plan')renderPlan()};renderLibrary();renderPlan('day');
 </script>
