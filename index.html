@@ -282,3 +282,26 @@ var quoteReviewRender=renderReview;renderReview=function(){
 };
 var quoteGo=go;go=function(id,b){quoteGo(id,b);if(id==='review')renderReview()};
 </script>
+<style>
+.reviewQuote{display:none!important}.todayQuote{margin:19px 0;padding:17px 19px;border-radius:17px;background:linear-gradient(110deg,#f9eef6,#f6f0ff);border:1px solid #eadbea;display:flex;gap:10px;align-items:center}.todayQuote .face{font-size:25px}.todayQuote p{margin:0;line-height:1.6;flex:1;color:#6d536a;font-size:14px}.todayQuote .quoteChange{color:#8d6b89}
+</style>
+<script>
+const cutePeople=['今天也来打卡的小脑袋','认真但想躺平的你','努力加载中的考研人','有一点困的小勇士','把焦虑揉成纸团的同学','正在和知识点和好的你','偷偷变厉害的你','一边喝水一边上岸预备役','会给自己加油的小朋友','虽然慢但不后退的你','今天也没有逃跑的你','努力得很安静的你','正在攒好运的同学','把难题瞪回去的你','想摆烂又坐回来的你','很会坚持的小宝','正在闪闪发光的你','把进度条推了一点点的你','努力到眼睛发亮的你','不慌不忙往前走的你','会把不会变成会的你','背着背着就变强的你','今天也值得夸一下的你','和考试慢慢熟起来的你','未来会谢谢现在的你'];
+const cuteEnds=['先把这一小页拿下，剩下的明天再一起收拾','今天的努力正在悄悄给你攒“上岸碎片”','不用一下子变超人，先当五分钟认真小人就很厉害','你背的每一句，都会在考场某个瞬间举手说“我会”','现在的困，是大脑在偷偷给知识铺小被子','别急，知识点正在路上，只是它走路有点慢','今天完成一点点，就已经比昨天的犹豫多一大截','你不是机器，休息一下再冲也完全可以','这题再凶也不能把你怎么样，顶多被你圈起来','请把“我不行”换成“我再看一眼”，气氛立刻不一样','认真五分钟，奖励自己发呆两分钟，交易成立','你的脑袋不是空白页，它只是正在排版','慢一点没关系，乌龟也没有因为慢就退出比赛','今天的你已经很棒了，别忘了给自己盖个小红花','把大目标切成小块，像吃薯片一样一口一口来'];
+const cuteQuotePool=cutePeople.flatMap(a=>cuteEnds.map(b=>a+'：'+b+'。')).slice(0,365);
+let todayQuoteIndex=0;
+function showTodayQuote(next){
+ if(next)todayQuoteIndex=(todayQuoteIndex+1)%cuteQuotePool.length;
+ else {const day=Math.floor((Date.now()+8*3600000)/86400000);todayQuoteIndex=((day%cuteQuotePool.length)+cuteQuotePool.length)%cuteQuotePool.length}
+ const el=document.getElementById('todayQuoteText');if(el)el.textContent=cuteQuotePool[todayQuoteIndex];
+}
+var cuteTodayHome=renderHome;renderHome=function(){
+ cuteTodayHome();
+ const home=document.getElementById('home');if(!home)return;
+ const old=document.getElementById('todayQuote');if(old)old.remove();
+ const hero=home.querySelector('.hero');if(!hero)return;
+ const q=document.createElement('section');q.id='todayQuote';q.className='todayQuote';q.innerHTML='<span class="face">૮ ˶ᵔ ᵕ ᵔ˶ ა</span><p id="todayQuoteText"></p><button class="quoteChange" onclick="showTodayQuote(true)">换一句</button>';
+ hero.insertAdjacentElement('afterend',q);showTodayQuote(false);
+};
+renderHome();
+</script>
