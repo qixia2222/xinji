@@ -305,3 +305,19 @@ var cuteTodayHome=renderHome;renderHome=function(){
 };
 renderHome();
 </script>
+<script>
+var originalTodayQuote=showTodayQuote;
+showTodayQuote=function(next){
+ originalTodayQuote(next);
+ const heroTitle=document.querySelector('#home .hero h2');
+ if(heroTitle&&cuteQuotePool&&cuteQuotePool.length)heroTitle.textContent=cuteQuotePool[todayQuoteIndex];
+};
+var heroQuoteHome=renderHome;
+renderHome=function(){
+ heroQuoteHome();
+ const extra=document.getElementById('todayQuote');if(extra)extra.remove();
+ const heroTitle=document.querySelector('#home .hero h2');
+ if(heroTitle&&cuteQuotePool&&cuteQuotePool.length)heroTitle.textContent=cuteQuotePool[todayQuoteIndex];
+};
+renderHome();
+</script>
