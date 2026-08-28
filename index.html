@@ -244,3 +244,21 @@ function renderReport(){
 }
 var mobileGo=go;go=function(id,b){mobileGo(id,b);if(id==='report')renderReport()};renderReport();
 </script>
+<style>
+.blindBox{margin:22px 0;padding:23px;border-radius:20px;background:linear-gradient(120deg,#fff8ef,#f4e9da);border:1px solid #f0dfc8;position:relative;overflow:hidden}.blindBox:after{content:"✦";position:absolute;right:23px;top:12px;font-size:44px;color:#e4c79f;opacity:.65}.blindBox h3{margin:5px 0 8px;font-size:20px}.blindDraw{background:#8d7056;margin-top:8px}.blindCard{margin-top:15px;background:#fffdf9;border-radius:14px;padding:15px;max-width:620px;border:1px solid #f0e2d2}.blindCard img{max-height:160px;max-width:100%;border-radius:9px;margin:8px 0}.blindAnswer{display:none;border-top:1px solid #eee4da;margin-top:10px;padding-top:10px;color:#476f52}.blindLink{border:0;background:transparent;color:#765c46;text-decoration:underline;cursor:pointer;padding:5px 0}
+</style>
+<script>
+var blindCardId=null;
+function blindContent(){
+ const box=document.getElementById('blindCardContent');if(!box)return;
+ const cards=data.cards||[];
+ if(!cards.length){box.innerHTML='<p class="tiny">内容库还是空的，先录入几张卡，再来抽今日盲盒吧。</p>';return}
+ if(!blindCardId){box.innerHTML='<p class="tiny">不看答案，凭直觉抽一张。也许刚好抽到今天最该记住的内容。</p>';return}
+ const c=cards.find(x=>x.id===blindCardId);if(!c){blindCardId=null;blindContent();return}
+ box.innerHTML='<span class="ey">'+esc(c.subject||'未分类')+(c.chapter?' · '+esc(c.chapter):'')+'</span>'+(c.frontImage?'<img src="'+c.frontImage+'" alt="卡片正面">':'')+'<h3>'+esc(c.question||'请查看正面图片')+'</h3><button class="blindLink" onclick="showBlindAnswer()">翻开背面答案</button><div id="blindAnswer" class="blindAnswer">'+(c.backImage?'<img src="'+c.backImage+'" alt="卡片背面">':'')+'<b>'+esc(c.answer||'请查看背面图片')+'</b></div>';
+}
+function drawBlindCard(){const cards=data.cards||[];if(!cards.length){go('library');return}let next=cards[Math.floor(Math.random()*cards.length)];if(cards.length>1&&next.id===blindCardId)next=cards[(cards.indexOf(next)+1)%cards.length];blindCardId=next.id;blindContent()}
+function showBlindAnswer(){const a=document.getElementById('blindAnswer');if(a)a.style.display='block'}
+var blindHome=renderHome;renderHome=function(){blindHome();const home=document.getElementById('home');if(!home)return;const hero=home.querySelector('.hero');if(!hero)return;hero.insertAdjacentHTML('afterend','<section class="blindBox"><p class="ey">今日卡片盲盒</p><h3>抽一张，和知识不期而遇。</h3><p class="tiny">随机从你的内容库抽取，不改变系统的复习安排。</p><button class="btn blindDraw" onclick="drawBlindCard()">✨ 随机抽一张</button><div id="blindCardContent" class="blindCard"></div></section>');blindContent()};
+renderHome();
+</script>
