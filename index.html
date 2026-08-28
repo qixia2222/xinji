@@ -118,3 +118,29 @@ function renderReport(){
 }
 var analyticsGo=go;go=function(id,btn){analyticsGo(id,btn);if(id==='report')renderReport()};renderReport();
 </script>
+<style>
+.undoBar{margin:10px 0;padding:10px 13px;border-radius:11px;background:#f6effa;color:#624d7f;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center}.miniActions{float:right;display:flex;gap:4px}.miniActions button{border:0;background:rgba(255,255,255,.55);border-radius:5px;font-size:10px;padding:2px 4px;cursor:pointer}.spaceStat{font-size:24px;font-weight:800;color:#594776;margin:5px 0}
+</style>
+<script>
+let planEditingId=null,balancing=false;
+async function autoBalance(){
+ if(!state||balancing||state.meta?.balancedOn===day())return;
+ balancing=true;state.meta=state.meta||{};state.meta.balancedOn=day();
+ const due=cardsDue(),cap=state.settings.cap||24;
+ if(due.length>cap){for(let i=cap;i<due.length;i++){due[i].due=day(addDays(new Date(),1+Math.floor((i-cap)/cap)))}state.meta.lastBalanced=due.length-cap}
+ await save();balancing=false;
+}
+var safeHome=renderHome;renderHome=function(){safeHome();autoBalance()};
+var reviewBase=renderReview;renderReview=function(){reviewBase();if(state&&state.undo){const p=$('#review');if(p&&!$('#undoBar')){const b=document.createElement('div');b.id='undoBar';b.className='undoBar';b.innerHTML='<span>刚才的复习评价可以撤销。</span><button class="textBtn" onclick="undoLastGrade()">撤销</button>';p.querySelector('h1')?.insertAdjacentElement('afterend',b)}}};
+var gradeBase=grade;grade=async function(quality){const c=state.cards.find(x=>x.id===activeCardId);const before={mastery:c.mastery,ease:c.ease,interval:c.interval,reps:c.reps,due:c.due};await gradeBase(quality);const log=state.history[state.history.length-1];state.undo={cardId:c.id,before,historyId:log?.id,created:Date.now()};await save();renderReview()};
+async function undoLastGrade(){const u=state.undo,c=state.cards.find(x=>x.id===u?.cardId);if(!c)return;if(u.before)Object.assign(c,u.before);state.history=state.history.filter(h=>h.id!==u.historyId);state.undo=null;await save();renderReview();renderHome()}
+function planTask(p){return '<div class="plan-task '+(p.done?'done':'')+'" style="background:'+p.color+'"><span onclick="togglePlan(\''+p.id+'\')">'+(p.done?'✓ ':'')+esc(p.text)+'</span><span class="miniActions"><button onclick="event.stopPropagation();editPlan(\''+p.id+'\')">改</button><button onclick="event.stopPropagation();deletePlan(\''+p.id+'\')">删</button></span></div>'}
+function editPlan(id){planEditingId=id;renderPlans()}
+async function deletePlan(id){if(!confirm('删除这条计划吗？'))return;state.plans=state.plans.filter(p=>p.id!==id);if(planEditingId===id)planEditingId=null;await save();renderPlans()}
+var savePlanBase=savePlan;savePlan=async function(){if(!planEditingId)return savePlanBase();const p=state.plans.find(x=>x.id===planEditingId),date=$('#planDate').value,text=$('#planText').value.trim();if(!text)return;p.date=date;p.text=text;p.color=$('#planColor').value;p.scope=scope(p.mode,new Date((date.length===7?date+'-01':date)+'T12:00:00'));planEditingId=null;await save();renderPlans()}
+var plansBase=renderPlans;renderPlans=function(){plansBase();if(planEditingId){const p=state.plans.find(x=>x.id===planEditingId);if(p){$('#planDate').value=p.date;$('#planText').value=p.text;$('#planColor').value=p.color;const b=$('.plan-form .btn');b.textContent='保存修改';const cancel=document.createElement('button');cancel.className='textBtn';cancel.textContent='取消编辑';cancel.onclick=()=>{planEditingId=null;renderPlans()};b.insertAdjacentElement('afterend',cancel)}}if(planMode==='day'){const s=scope('day',startOf('day',planFocus)),k=day(startOf('day',planFocus)),items=records('day',s,k);$$('#plans .subject-row').forEach((row,i)=>{const p=items[i];if(p&&!row.querySelector('.miniActions')){const a=document.createElement('div');a.className='miniActions';a.innerHTML='<button onclick="editPlan(\''+p.id+'\')">改</button><button onclick="deletePlan(\''+p.id+'\')">删</button>';row.appendChild(a)}})}};
+async function deleteBlob(key){const db=await openDB();return new Promise((resolve,reject)=>{const r=db.transaction(IMG,'readwrite').objectStore(IMG).delete(key);r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error)})}
+async function storageStats(){const entries=await imageEntries();return {count:entries.length,bytes:entries.reduce((s,x)=>s+(x.value.size||0),0)}}
+async function cleanupImages(){const valid=new Set(state.cards.flatMap(c=>[c.frontImageId,c.backImageId]).filter(Boolean)),entries=await imageEntries();let n=0;for(const x of entries)if(!valid.has(x.key)){await deleteBlob(x.key);n++}alert(n?'已清理 '+n+' 张无用图片。':'没有发现无用图片。');renderMore()}
+var moreBase=renderMore;renderMore=function(){moreBase();const p=$('#more');if(!p)return;const box=document.createElement('div');box.className='box';box.innerHTML='<p class="ey">图片空间维护</p><h3>让资料库保持轻盈</h3><div id="spaceStats" class="spaceStat">正在计算…</div><p class="tiny">删除卡片后可清理未被使用的旧图片；不会删除正在使用的卡片图片。</p><button class="btn light" onclick="cleanupImages()">清理无用图片</button>';p.querySelector('.more-grid')?.appendChild(box);storageStats().then(x=>{const el=$('#spaceStats');if(el)el.textContent=(x.bytes/1024/1024).toFixed(1)+' MB · '+x.count+' 张图片'})};
+</script>
