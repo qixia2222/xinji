@@ -321,3 +321,64 @@ renderHome=function(){
 };
 renderHome();
 </script>
+<style>
+.periodNav{display:flex;align-items:center;gap:9px;margin:12px 0 18px}.periodNav strong{flex:1;text-align:center}.periodNav button{border:1px solid #dfe6dc;background:#fff;color:#557259;border-radius:9px;padding:8px 10px;cursor:pointer}.historyPanel{margin-top:16px;background:#fbfcfa;border:1px solid #e7ece5;border-radius:15px;padding:14px}.historyItem{display:flex;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid #edf0ec;font-size:12px}.historyItem:last-child{border:0}.historyItem time{min-width:78px;color:#879087}.yearGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.yearMonth{min-height:145px;border:1px solid #e1e7df;border-radius:13px;padding:10px;background:#fff}.yearMonth h4{margin:0 0 7px;color:#547057}.yearMonth .calAdd{margin-top:8px}@media(max-width:760px){.yearGrid{grid-template-columns:repeat(2,1fr)}}
+</style>
+<script>
+var planFocusDate=new Date();
+function pad2(n){return String(n).padStart(2,'0')}
+function planDayKey(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
+function focusStart(mode){
+ const d=new Date(planFocusDate);
+ if(mode==='week')d.setDate(d.getDate()-(d.getDay()+6)%7);
+ if(mode==='month')d.setDate(1);
+ if(mode==='year')d.setMonth(0,1);
+ return d;
+}
+function focusScope(mode){
+ const d=focusStart(mode);
+ if(mode==='day')return planDayKey(d);
+ if(mode==='week')return planDayKey(d);
+ if(mode==='month')return d.getFullYear()+'-'+pad2(d.getMonth()+1);
+ return String(d.getFullYear());
+}
+function periodLabel(mode){
+ const d=focusStart(mode),end=new Date(d);
+ if(mode==='day')return d.getFullYear()+' 年 '+(d.getMonth()+1)+' 月 '+d.getDate()+' 日';
+ if(mode==='week'){end.setDate(end.getDate()+6);return (d.getMonth()+1)+' 月 '+d.getDate()+' 日 — '+(end.getMonth()+1)+' 月 '+end.getDate()+' 日'}
+ if(mode==='month')return d.getFullYear()+' 年 '+(d.getMonth()+1)+' 月';
+ return d.getFullYear()+' 年年度计划';
+}
+function planRecords(mode,scope){return(data.plans||[]).filter(x=>x.mode===mode&&x.scope===scope)}
+function planDateRecords(mode,scope,date){return planRecords(mode,scope).filter(x=>x.date===date)}
+function plannerComposer(mode,min,max,value){
+ const type=mode==='year'?'month':'date',defaultValue=value;
+ return '<div class="planComposer"><input id="plannerDate" type="'+type+'" value="'+defaultValue+'" '+(min?'min="'+min+'"':'')+' '+(max?'max="'+max+'"':'')+'><input id="plannerText" placeholder="添加一条'+(mode==='day'?'日':mode==='week'?'周':mode==='month'?'月':'年')+'计划"><div class="colorPick"><button class="colorDot" style="background:#e2f0df" onclick="document.getElementById(\'plannerColor\').value=\'#e2f0df\'"></button><button class="colorDot" style="background:#f9e6d5" onclick="document.getElementById(\'plannerColor\').value=\'#f9e6d5\'"></button><button class="colorDot" style="background:#e6e3f5" onclick="document.getElementById(\'plannerColor\').value=\'#e6e3f5\'"></button><input id="plannerColor" type="hidden" value="#e2f0df"><input id="plannerMode" type="hidden" value="'+mode+'"></div><button class="btn" onclick="savePlannerPlan()">添加</button></div>';
+}
+function setPlannerDate(date){const e=document.getElementById('plannerDate');if(e){e.value=date;document.getElementById('plannerText').focus()}}
+function plannerScope(mode,date){
+ if(mode==='day')return date;
+ const d=new Date((date.length===7?date+'-01':date)+'T12:00:00');
+ if(mode==='week'){d.setDate(d.getDate()-(d.getDay()+6)%7);return planDayKey(d)}
+ if(mode==='month')return d.getFullYear()+'-'+pad2(d.getMonth()+1);
+ return String(d.getFullYear());
+}
+function savePlannerPlan(){const mode=document.getElementById('plannerMode').value,date=document.getElementById('plannerDate').value,text=document.getElementById('plannerText').value.trim(),color=document.getElementById('plannerColor').value;if(!text){document.getElementById('plannerText').focus();return}data.plans=data.plans||[];data.plans.unshift({id:Date.now(),mode,scope:plannerScope(mode,date),date,text,color,done:false});persist();renderPlan(mode)}
+function shiftPlanPeriod(mode,delta){if(mode==='day')planFocusDate.setDate(planFocusDate.getDate()+delta);if(mode==='week')planFocusDate.setDate(planFocusDate.getDate()+delta*7);if(mode==='month')planFocusDate.setMonth(planFocusDate.getMonth()+delta);if(mode==='year')planFocusDate.setFullYear(planFocusDate.getFullYear()+delta);renderPlan(mode)}
+function resetPlanPeriod(mode){planFocusDate=new Date();renderPlan(mode)}
+function recentPlanHistory(mode){
+ const list=(data.plans||[]).filter(x=>x.mode===mode).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,8);
+ return '<div class="historyPanel"><p class="ey">往期'+(mode==='day'?'日':mode==='week'?'周':mode==='month'?'月':'年')+'计划</p>'+(list.length?list.map(x=>'<div class="historyItem"><time>'+esc(x.date)+'</time><span class="'+(x.done?'done':'')+'">'+(x.done?'✓ ':'')+esc(x.text)+'</span></div>').join(''):'<p class="tiny">还没有历史记录。新增计划后会一直保留在这里。</p>')+'</div>';
+}
+function planCardTask(x){return '<div class="cellTask '+(x.done?'done':'')+'" style="background:'+(x.color||'#e2f0df')+'" onclick="toggleCalendarTask('+x.id+')">'+(x.done?'✓ ':'')+esc(x.text)+'</div>'}
+function renderPlan(mode){
+ const p=document.getElementById('plan');if(!p)return;mode=mode||p.dataset.view||'day';p.dataset.view=mode;
+ const focus=focusStart(mode),scope=focusScope(mode),label=periodLabel(mode);let view='',min='',max='',value='';
+ if(mode==='day'){const date=planDayKey(focus),items=planDateRecords('day',scope,date);value=date;view='<div class="planPanel">'+(items.length?items.map(x=>'<div class="goalRow"><button class="checkPlan" onclick="toggleCalendarTask('+x.id+')">'+(x.done?'✓':'○')+'</button><div class="goalText '+(x.done?'done':'')+'" style="background:'+(x.color||'#e2f0df')+'">'+esc(x.text)+'</div><button class="miniDot" style="background:'+(x.color||'#e2f0df')+'" onclick="recolorCalendarTask('+x.id+')"></button></div>').join(''):'<div class="empty"><b>这一天没有计划</b>可以选择另一日查看，也可以添加一条。</div>')+'</div>'}
+ if(mode==='week'){const end=new Date(focus);end.setDate(end.getDate()+6);min=planDayKey(focus);max=planDayKey(end);value=planDayKey(focus);let cells='';for(let i=0;i<7;i++){const d=new Date(focus);d.setDate(focus.getDate()+i);const key=planDayKey(d);cells+='<div class="weekCell '+(key===today()?'today':'')+'"><b>'+['周一','周二','周三','周四','周五','周六','周日'][i]+'</b><div class="calDate">'+(d.getMonth()+1)+' 月 '+d.getDate()+' 日</div>'+planDateRecords('week',scope,key).map(planCardTask).join('')+'<button class="calAdd" onclick="setPlannerDate(\''+key+'\')">＋ 添加</button></div>'}view='<div class="calWrap"><div class="weekCal">'+cells+'</div></div>'}
+ if(mode==='month'){const first=new Date(focus.getFullYear(),focus.getMonth(),1),last=new Date(focus.getFullYear(),focus.getMonth()+1,0);min=planDayKey(first);max=planDayKey(last);value=min;const offset=(first.getDay()+6)%7;let cells='';for(let i=0;i<42;i++){const d=new Date(first);d.setDate(1+i-offset);const key=planDayKey(d),valid=d.getMonth()===first.getMonth();cells+='<div class="monthCell '+(!valid?'muted ':'')+(key===today()?'today':'')+'"><b>'+d.getDate()+'</b>'+(valid?planDateRecords('month',scope,key).map(planCardTask).join('')+'<button class="calAdd" onclick="setPlannerDate(\''+key+'\')">＋ 添加</button>':'')+'</div>'}view='<div class="calWrap"><div class="monthLabel">'+['一','二','三','四','五','六','日'].map(x=>'<span>'+x+'</span>').join('')+'</div><div class="monthCal">'+cells+'</div></div>'}
+ if(mode==='year'){const year=focus.getFullYear();value=year+'-01';min=value;max=year+'-12';let months='';for(let m=0;m<12;m++){const key=year+'-'+pad2(m+1),items=planDateRecords('year',scope,key);months+='<div class="yearMonth"><h4>'+(m+1)+' 月</h4>'+items.map(planCardTask).join('')+'<button class="calAdd" onclick="setPlannerDate(\''+key+'\')">＋ 添加月目标</button></div>'}view='<div class="yearGrid">'+months+'</div>'}
+ p.innerHTML='<p class="ey">学习计划 · 可以翻看每一段努力</p><h1>有方向地努力，也有余裕地生活。</h1><div class="planMode"><button class="'+(mode==='day'?'on':'')+'" onclick="renderPlan(\'day\')">日计划</button><button class="'+(mode==='week'?'on':'')+'" onclick="renderPlan(\'week\')">周计划</button><button class="'+(mode==='month'?'on':'')+'" onclick="renderPlan(\'month\')">月计划</button><button class="'+(mode==='year'?'on':'')+'" onclick="renderPlan(\'year\')">年计划</button></div><div class="periodNav"><button onclick="shiftPlanPeriod(\''+mode+'\',-1)">← 上一期</button><strong>'+label+'</strong><button onclick="resetPlanPeriod(\''+mode+'\')">回到现在</button><button onclick="shiftPlanPeriod(\''+mode+'\',1)">下一期 →</button></div><div class="planHero"><b>本期计划</b><p class="tiny">可以通过左右按钮查看以前写过的计划；每种计划独立保存。</p></div>'+plannerComposer(mode,min,max,value)+view+recentPlanHistory(mode);
+}
+var plannerGo=go;go=function(id,b){plannerGo(id,b);if(id==='plan')renderPlan()};renderPlan('day');
+</script>
