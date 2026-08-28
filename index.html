@@ -395,7 +395,7 @@ function changePlanHistoryPage(mode,delta){
 function recentPlanHistory(mode){
  const list=(data.plans||[]).filter(x=>x.mode===mode).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
  const pages=Math.max(1,Math.ceil(list.length/6)),page=Math.min(planHistoryPage[mode]||0,pages-1),chunk=list.slice(page*6,page*6+6);
- return '<div class="historyPanel"><p class="ey">往期'+(mode==='day'?'日':mode==='week'?'周':mode==='month'?'月':'年')+'计划</p>'+(chunk.length?chunk.map(x=>'<div class="historyItem"><time>'+esc(x.date)+'</time><span class="'+(x.done?'done':'')+'">'+(x.done?'✓ ':'')+esc(x.text)+'</span></div>').join(''):'<p class="tiny">还没有历史记录。新增计划后会一直保留在这里。</p>')+(list.length?'<div class="historyPager"><button onclick="changePlanHistoryPage(\''+mode+'\',1)" '+(page>=pages-1?'disabled':'')+'>上一页</button><span>'+ (page+1)+' / '+pages+' 页</span><button onclick="changePlanHistoryPage(\''+mode+'\',-1)" '+(page<=0?'disabled':'')+'>下一页</button></div>':'')+'</div>';
+ return '<div class="historyPanel"><p class="ey">往期'+(mode==='day'?'日':mode==='week'?'周':mode==='month'?'月':'年')+'计划</p>'+(chunk.length?chunk.map(x=>'<div class="historyItem"><time>'+esc(x.date)+'</time><span class="'+(x.done?'done':'')+'">'+(x.done?'✓ ':'')+esc(x.text)+'</span></div>').join(''):'<p class="tiny">还没有历史记录。新增计划后会一直保留在这里。</p>')+(list.length?'<div class="historyPager"><button onclick="changePlanHistoryPage(\''+mode+'\',-1)" '+(page<=0?'disabled':'')+'>上一页</button><span>'+ (page+1)+' / '+pages+' 页</span><button onclick="changePlanHistoryPage(\''+mode+'\',1)" '+(page>=pages-1?'disabled':'')+'>下一页</button></div>':'')+'</div>';
 }
 renderPlan(document.getElementById('plan')?.dataset.view||'day');
 </script>
