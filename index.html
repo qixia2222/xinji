@@ -262,3 +262,23 @@ function showBlindAnswer(){const a=document.getElementById('blindAnswer');if(a)a
 var blindHome=renderHome;renderHome=function(){blindHome();const home=document.getElementById('home');if(!home)return;const hero=home.querySelector('.hero');if(!hero)return;hero.insertAdjacentHTML('afterend','<section class="blindBox"><p class="ey">今日卡片盲盒</p><h3>抽一张，和知识不期而遇。</h3><p class="tiny">随机从你的内容库抽取，不改变系统的复习安排。</p><button class="btn blindDraw" onclick="drawBlindCard()">✨ 随机抽一张</button><div id="blindCardContent" class="blindCard"></div></section>');blindContent()};
 renderHome();
 </script>
+<style>
+.reviewQuote{margin:16px 0 24px;padding:16px 18px;border-radius:15px;background:linear-gradient(110deg,#fff8ed,#f6eadc);border:1px solid #f0dfc8;display:flex;gap:12px;align-items:flex-start}.reviewQuote .spark{font-size:20px}.reviewQuote p{margin:0;line-height:1.65;color:#6d5847;flex:1}.quoteChange{border:0;background:transparent;color:#95755b;cursor:pointer;font-size:12px;white-space:nowrap;padding:3px}
+</style>
+<script>
+const quoteStarts=['今天背不住也没关系','你和知识点的关系','这页笔记看起来很凶','单词暂时不认识你','大脑今天有点像省电模式','复习进度像蜗牛','错题本正在安静地等你','这道题的气焰','你的铅笔芯','背书时想吃东西的念头','今天的困意','知识点躲猫猫的本领','你的小脑袋瓜','英语阅读里的长句子','政治大题的字数','专业课的概念','刚才走神的三分钟','明天的你','今天这一页','咖啡和清醒','你的努力','拖延症的小尾巴','脑内的小剧场','这张卡片','每一次点击复习'];
+const quoteEnds=['先别急着宣布失败，它只是还没记住你的名字','看上去像敌人，其实是未来给你送分的小可爱','今天少记一点没关系，明天再把它逮回来','已经努力到值得给自己加一块小饼干','虽然慢，但方向是考研上岸，不是外卖骑手','会在你再看一眼之后悄悄投降','不需要完美出场，只要别缺席','今天先打一个小补丁，明天再升级系统','会记得你坚持过的每一分钟','不是摆烂，是在为下一次认真蓄力','先完成一小块，剩下的交给明天更清醒的你','不用和别人赛跑，你的赛道有自己的风景','会从“完全不会”慢慢变成“好像见过”','请允许自己边笑边学，效率也会被感染','正在变成你考试时最稳的底气'];
+const encouragements=quoteStarts.flatMap(a=>quoteEnds.map(b=>a+'，'+b+'。')).slice(0,365);
+let currentQuoteIndex=0;
+function showReviewQuote(next){
+ if(next)currentQuoteIndex=(currentQuoteIndex+1)%encouragements.length;
+ else {const n=Math.floor((Date.now()/86400000+8/24));currentQuoteIndex=((n%encouragements.length)+encouragements.length)%encouragements.length}
+ const el=document.getElementById('reviewQuoteText');if(el)el.textContent=encouragements[currentQuoteIndex];
+}
+var quoteReviewRender=renderReview;renderReview=function(){
+ quoteReviewRender();
+ const page=document.getElementById('review');if(!page)return;const old=document.getElementById('reviewQuote');if(old)old.remove();
+ const heading=page.querySelector('h1');const quote=document.createElement('div');quote.id='reviewQuote';quote.className='reviewQuote';quote.innerHTML='<span class="spark">✦</span><p id="reviewQuoteText"></p><button class="quoteChange" onclick="showReviewQuote(true)">换一句</button>';if(heading)heading.insertAdjacentElement('afterend',quote);else page.insertAdjacentElement('afterbegin',quote);showReviewQuote(false);
+};
+var quoteGo=go;go=function(id,b){quoteGo(id,b);if(id==='review')renderReview()};
+</script>
