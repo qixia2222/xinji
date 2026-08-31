@@ -20,7 +20,7 @@ let state,activeCardId=null,extraMode=false,cardDraft={front:null,back:null,fron
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function uid(){return crypto.randomUUID?crypto.randomUUID():'id-'+Date.now()+'-'+Math.random().toString(36).slice(2)}
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-const QA_DAY_OFFSET=Number(new URLSearchParams(location.search).get('day')||0);function day(d=new Date()){const x=new Date(d);x.setDate(x.getDate()+QA_DAY_OFFSET);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')}
+const QA_DAY_OFFSET=Number(new URLSearchParams(location.search).get('day')||0);function day(d=new Date()){const x=new Date(d);x.setDate(x.getDate()+Number(window.__QA_SIM_DAY??QA_DAY_OFFSET));return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')}
 function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
 function defaults(){return {v:2,cards:[],plans:[],diary:[],history:[],settings:{cap:24,theme:'#79649f',reminder:false},meta:{created:Date.now()}}}
 function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore(STORE);d.createObjectStore(IMG)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
@@ -143,4 +143,47 @@ async function deleteBlob(key){const db=await openDB();return new Promise((resol
 async function storageStats(){const entries=await imageEntries();return {count:entries.length,bytes:entries.reduce((s,x)=>s+(x.value.size||0),0)}}
 async function cleanupImages(){const valid=new Set(state.cards.flatMap(c=>[c.frontImageId,c.backImageId]).filter(Boolean)),entries=await imageEntries();let n=0;for(const x of entries)if(!valid.has(x.key)){await deleteBlob(x.key);n++}alert(n?'已清理 '+n+' 张无用图片。':'没有发现无用图片。');renderMore()}
 var moreBase=renderMore;renderMore=function(){moreBase();const p=$('#more');if(!p)return;const box=document.createElement('div');box.className='box';box.innerHTML='<p class="ey">图片空间维护</p><h3>让资料库保持轻盈</h3><div id="spaceStats" class="spaceStat">正在计算…</div><p class="tiny">删除卡片后可清理未被使用的旧图片；不会删除正在使用的卡片图片。</p><button class="btn light" onclick="cleanupImages()">清理无用图片</button>';p.querySelector('.more-grid')?.appendChild(box);storageStats().then(x=>{const el=$('#spaceStats');if(el)el.textContent=(x.bytes/1024/1024).toFixed(1)+' MB · '+x.count+' 张图片'})};
+</script><script>
+(async()=>{
+  if(new URLSearchParams(location.search).get('autotest')!=='week')return;
+  const pause=ms=>new Promise(r=>setTimeout(r,ms));
+  const errors=[];window.addEventListener('error',e=>errors.push(e.message));
+  const marker=document.createElement('button');marker.id='qaWeekResult';marker.disabled=true;marker.style.cssText='position:fixed;top:12px;right:12px;z-index:9999;padding:10px;border-radius:10px;border:0;background:#79649f;color:#fff;font-weight:700';marker.textContent='正在运行 7 天隔离测试…';document.body.appendChild(marker);
+  try{
+    for(let i=0;!state&&i<60;i++)await pause(50);
+    if(!state)throw Error('初始化超时');
+    window.__QA_SIM_DAY=0;state=defaults();
+    const make=(id,subject)=>({id,subject,chapter:'第 1 章',tags:'七天 测试',front:'问题 '+id,back:'答案 '+id,mastery:0,ease:2.35,interval:0,reps:0,due:day(),created:day()});
+    state.cards=[make('qa-card-1','测试英语'),make('qa-card-2','测试政治'),make('qa-card-3','测试专业课')];await save();
+    for(let d=0;d<7;d++){
+      window.__QA_SIM_DAY=d;
+      for(const c of cardsDue().slice()){
+        activeCardId=c.id;
+        await grade(c.id==='qa-card-3'?1:(c.id==='qa-card-2'&&d===0?3:5));
+      }
+    }
+    window.__QA_SIM_DAY=6;
+    renderDiary();$('#diaryText').value='第 7 天隔离测试日记';await saveDiary('diary');
+    const year=new Date().getFullYear(),plans=[['day',day(),'日'],['week',day(),'周'],['month',day(),'月'],['year',year+'-09','年']];
+    for(const [mode,date,label] of plans){
+      planMode=mode;planFocus=new Date();renderPlans();$('#planDate').value=date;$('#planText').value='QA '+label+'计划';await savePlan();
+      const p=state.plans[0];await togglePlan(p.id);
+    }
+    renderReport();
+    const restored=await idb(STORE,'state');
+    const checks={
+      cards:restored.cards.length===3,
+      history:restored.history.length===14,
+      diary:restored.diary.length===1,
+      plans:restored.plans.length===4&&restored.plans.every(p=>p.done),
+      scheduling:cardsDue().length===0&&restored.cards.every(c=>c.due>day()),
+      report:$('#report').innerText.includes('学习健康度'),
+      errors:errors.length===0
+    };
+    const ok=Object.values(checks).every(Boolean);
+    window.__WEEK_QA={ok,checks,history:restored.history.length,cards:restored.cards.map(c=>({id:c.id,due:c.due,mastery:c.mastery,reps:c.reps})),plans:restored.plans.length,diary:restored.diary.length};
+    marker.textContent=ok?'✅ 7 天测试通过':'❌ 7 天测试失败';
+    marker.style.background=ok?'#79649f':'#b7525b';
+  }catch(e){window.__WEEK_QA={ok:false,error:String(e)};marker.textContent='❌ 7 天测试失败';marker.style.background='#b7525b'}
+})()
 </script></body></html>
